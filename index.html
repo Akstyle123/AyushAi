@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🧠 AI Interview Copilot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css" rel="stylesheet" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Fixed positioning for top and bottom elements */
+    .fixed-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .dark .fixed-header {
+      background: #1f2937;
+      border-bottom: 1px solid #374151;
+    }
+    
+    .fixed-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: white;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .dark .fixed-footer {
+      background: #1f2937;
+      border-top: 1px solid #374151;
+    }
+    
+    /* Main content area with fixed positioning */
+    .main-container {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 20rem;
+      background: white;
+      border-right: 1px solid #e5e7eb;
+      z-index: 50;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+    
+    .dark .sidebar {
+      background: #1f2937;
+      border-right: 1px solid #374151;
+    }
+    
+    .sidebar.hidden {
+      transform: translateX(-100%);
+    }
+    
+    .main-content {
+      flex: 1;
+      margin-left: 20rem;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    
+    /* Chat container with manual scrolling */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .chat-messages-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding-top: 80px; /* Account for fixed header */
+      padding-bottom: 120px; /* Account for fixed footer */
+    }
+    
+    #chatMessages {
+      scroll-behavior: auto; /* Disable smooth scrolling */
+      overscroll-behavior: contain;
+      height: 100%;
+      overflow-y: auto;
+    }
+    
+    /* Prevent auto-scrolling */
+    #chatMessages.auto-scroll-disabled {
+      scroll-behavior: auto !important;
+    }
+    
+    .message-bubble {
+      max-width: 85%;
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .typing-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #6b7280;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+    
+    .typing-indicator:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-10px); }
+    }
+    
+    .model-card {
+      transition: all 0.2s ease;
+      min-height: 80px;
+    }
+    
+    .model-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .markdown-content pre {
+      background-color: #1e293b;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      max-width: 100%;
+    }
+    
+    .markdown-content code {
+      background-color: #374151;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+    }
+    
+    .markdown-content pre code {
+      background-color: transparent;
+      padding: 0;
+    }
+    
+    /* Custom bullet styling */
+    .markdown-content ul {
+      list-style-type: none;
+      padding-left: 1.5rem;
+    }
+    
+    .markdown-content ul li {
+      position: relative;
+      margin-bottom: 0.5rem;
+      padding-left: 1.5rem;
+    }
+    
+    .markdown-content ul li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #6366f1;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    
+    .markdown-content ol {
+      padding-left: 1.5rem;
+    }
+    
+    .markdown-content ol li {
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Java code block styling */
+    .java-example {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .java-example h4 {
+      color: white;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    
+    .java-example pre {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 0.25rem;
+      padding: 0.75rem;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .chat-messages-wrapper {
+        padding-top: 70px;
+        padding-bottom: 100px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        max-width: 100%;
+      }
+      
+      .message-bubble {
+        max-width: 95%;
+        margin: 0 0.5rem;
+      }
+      
+      .model-card {
+        min-height: 70px;
+        padding: 0.75rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .message-bubble {
+        max-width: 98%;
+        margin: 0 0.25rem;
+      }
+      
+      .model-card {
+        min-height: 60px;
+        padding: 0.5rem;
+      }
+    }
+    
+    /* Q&A styling */
+    .qa-section {
+      background-color: #f3f4f6;
+      border-left: 4px solid #6366f1;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+    
+    .dark .qa-section {
+      background-color: #374151;
+      border-left-color: #818cf8;
+    }
+    
+    .qa-question {
+      font-weight: 600;
+      color: #6366f1;
+      margin-bottom: 0.5rem;
+    }
+    
+    .qa-answer {
+      color: #374151;
+    }
+    
+    .dark .qa-answer {
+      color: #d1d5db;
+    }
+    
+    /* Touch-friendly improvements */
+    @media (hover: none) and (pointer: coarse) {
+      .model-card {
+        min-height: 60px;
+      }
+      
+      button, .model-card {
+        min-height: 44px;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+  <!-- Mobile Menu Button -->
+  <button id="mobileMenuBtn" class="fixed top-4 left-4 z-50 lg:hidden bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg" title="Open menu">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-800 shadow-xl z-40 lg:relative lg:translate-x-0 lg:block">
+    <div class="p-6 space-y-6">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">Settings</h2>
+        <button id="closeSidebarBtn" class="lg:hidden text-gray-500 hover:text-gray-700" title="Close menu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- API Key Section -->
+      <div>
+        <label class="block text-sm font-medium mb-2">🔑 API Key</label>
+        <div class="space-y-2">
+          <input id="apiKeyInput" type="password" placeholder="Enter OpenRouter API Key" 
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <button onclick="saveApiKey()" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">
+            Save Key
+          </button>
+        </div>
+      </div>
+
+      <!-- Model Selection -->
+      <div>
+        <label class="block text-sm font-medium mb-2">🤖 Select Model</label>
+        <div class="space-y-2 max-h-96 overflow-y-auto">
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="google/gemini-2.0-flash-exp:free">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">Gemini 2.0 Flash</h4>
+                <p class="text-xs text-gray-500">Fast & accurate</p>
+              </div>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+            </div>
+          </div>
+          
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="google/gemma-3n-e2b-it:free">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">Gemma 3n E2B</h4>
+                <p class="text-xs text-gray-500">Enhanced reasoning</p>
+              </div>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+            </div>
+          </div>
+
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="google/gemma-3n-e4b-it:free">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">Gemma 3n E4B</h4>
+                <p class="text-xs text-gray-500">Advanced capabilities</p>
+              </div>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+            </div>
+          </div>
+
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="google/gemma-2-9b-it:free">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">Gemma 2 9B</h4>
+                <p class="text-xs text-gray-500">Balanced performance</p>
+              </div>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+            </div>
+          </div>
+
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="deepseek/deepseek-r1:free">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">DeepSeek R1</h4>
+                <p class="text-xs text-gray-500">Reasoning focused</p>
+              </div>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+            </div>
+          </div>
+
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="qwen/qwen-2.5-72b-instruct:free">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">Qwen 72B</h4>
+                <p class="text-xs text-gray-500">Large language model</p>
+              </div>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+            </div>
+          </div>
+
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="agentica-org/deepcoder-14b-preview:free">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">DeepCoder 14B</h4>
+                <p class="text-xs text-gray-500">Code generation</p>
+              </div>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+            </div>
+          </div>
+
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="cognitivecomputations/dolphin-mistral-24b-venice-edition:free">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">Dolphin Mistral 24B</h4>
+                <p class="text-xs text-gray-500">Conversational AI</p>
+              </div>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Free</span>
+            </div>
+          </div>
+
+          <div class="model-card p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500" data-model="openrouter/horizon-beta">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-medium">Horizon Beta</h4>
+                <p class="text-xs text-gray-500">OpenRouter Beta</p>
+              </div>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Beta</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theme Toggle -->
+      <div>
+        <label class="block text-sm font-medium mb-2">🎨 Theme</label>
+        <button onclick="toggleDarkMode()" class="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center space-x-2">
+          <span id="themeIcon">🌙</span>
+          <span id="themeText">Dark Mode</span>
+        </button>
+      </div>
+
+      <!-- Clear Chat -->
+      <button onclick="clearChat()" class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition">
+        Clear Chat
+      </button>
+    </div>
+  </div>
+
+    <!-- Main Chat Area - Fixed positioning for mobile -->
+  <div class="flex-1 flex flex-col h-screen lg:ml-80">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm px-6 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">🧠 AI Interview Copilot</h1>
+        <div class="flex items-center space-x-4">
+          <span id="currentModel" class="text-sm text-gray-600 dark:text-gray-400">Gemini 2.0 Flash</span>
+          <button onclick="newChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+            New Chat
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Chat Messages -->
+    <div id="chatMessages" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      <div class="text-center text-gray-500 dark:text-gray-400 py-8">
+        <div class="text-6xl mb-4">🧠</div>
+        <h2 class="text-xl font-semibold mb-2">Welcome to AI Interview Copilot</h2>
+        <p class="text-sm">Select a model from the sidebar and start asking questions!</p>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex items-end space-x-4">
+            <div class="flex-1 relative">
+              <textarea 
+                id="messageInput" 
+                placeholder="Type your message here... (Shift+Enter for new line)"
+                class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700"
+                rows="1"
+              ></textarea>
+              <button onclick="startListening()" class="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-indigo-600 transition bg-gray-100 dark:bg-gray-600 rounded-full w-10 h-10 flex items-center justify-center" title="Start voice input">
+                🎤
+              </button>
+            </div>
+          <button onclick="sendMessage()" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            Send
+          </button>
+        </div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          Press Enter to send • Shift+Enter for new line • Click 🎤 for voice input
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentModel = 'google/gemini-2.0-flash-exp:free';
+    let isLoading = false;
+    let recognition = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadApiKey();
+      setupEventListeners();
+      setupModelSelection();
+      setupTextarea();
+    });
+
+    function setupEventListeners() {
+      // Mobile menu
+      document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.add('open');
+      });
+
+      document.getElementById('closeSidebarBtn').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('open');
+      });
+
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', (e) => {
+        const sidebar = document.getElementById('sidebar');
+        const menuBtn = document.getElementById('mobileMenuBtn');
+        
+        if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+          sidebar.classList.remove('open');
+        }
+      });
+
+      // Enter key handling
+      document.getElementById('messageInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    function setupModelSelection() {
+      const modelCards = document.querySelectorAll('.model-card');
+      modelCards.forEach(card => {
+        card.addEventListener('click', () => {
+          // Remove previous selection
+          modelCards.forEach(c => c.classList.remove('border-indigo-500', 'bg-indigo-50'));
+          
+          // Add selection to clicked card
+          card.classList.add('border-indigo-500', 'bg-indigo-50');
+          
+          // Update current model
+          currentModel = card.dataset.model;
+          document.getElementById('currentModel').textContent = card.querySelector('h4').textContent;
+          
+          // Close sidebar on mobile
+          if (window.innerWidth < 1024) {
+            document.getElementById('sidebar').classList.remove('open');
+          }
+        });
+      });
+    }
+
+    function setupTextarea() {
+      const textarea = document.getElementById('messageInput');
+      textarea.addEventListener('input', () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+      });
+    }
+
+    function loadApiKey() {
+      const savedKey = localStorage.getItem('openrouter_api_key');
+      if (savedKey) {
+        document.getElementById('apiKeyInput').value = savedKey;
+      }
+    }
+
+    function saveApiKey() {
+      const key = document.getElementById('apiKeyInput').value.trim();
+      if (key) {
+        localStorage.setItem('openrouter_api_key', key);
+        showNotification('API Key saved successfully!');
+      }
+    }
+
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    }
+
+    async function startListening() {
+      if (!('webkitSpeechRecognition' in window)) {
+        showNotification('Speech recognition not supported');
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err) {
+        showNotification('Microphone permission denied');
+        return;
+      }
+
+      if (!recognition) {
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          document.getElementById('messageInput').placeholder = '🎤 Listening...';
+        };
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          document.getElementById('messageInput').value = transcript;
+          
+          // Auto-send the voice input
+          setTimeout(() => {
+            sendMessage();
+          }, 100);
+        };
+
+        recognition.onerror = (event) => {
+          showNotification('Speech recognition error: ' + event.error);
+        };
+
+        recognition.onend = () => {
+          document.getElementById('messageInput').placeholder = 'Type your message here...';
+        };
+      }
+
+      recognition.start();
+    }
+
+    async function sendMessage() {
+      if (isLoading) return;
+
+      const messageInput = document.getElementById('messageInput');
+      const message = messageInput.value.trim();
+      const apiKey = document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('openrouter_api_key');
+
+      if (!message) {
+        showNotification('Please enter a message');
+        return;
+      }
+
+      if (!apiKey) {
+        showNotification('Please enter your API key');
+        document.getElementById('sidebar').classList.add('open');
+        return;
+      }
+
+      // Add user message to chat
+      addMessage(message, 'user');
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+
+      // Show typing indicator
+      showTypingIndicator();
+
+      isLoading = true;
+
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'AI Interview Copilot'
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            stream: true,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a concise AI interview assistant. Use markdown, provide technical details, examples, and include relevant questions with answers. Format the output with a clear title styled with a larger font size, and present related questions and answers in a structured manner.`
+              },
+              {
+                role: 'user',
+                content: message
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+
+        removeTypingIndicator();
+        const aiMessageDiv = addMessage('', 'assistant');
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n').filter(line => line.trim());
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') break;
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  fullResponse += content;
+                  updateMessage(aiMessageDiv, fullResponse);
+                }
+              } catch (e) {
+                console.error('Error parsing JSON:', e);
+              }
+            }
+          }
+        }
+
+        // Final render with markdown
+        const finalContent = aiMessageDiv.querySelector('.message-content');
+        finalContent.innerHTML = marked.parse(fullResponse);
+        
+        // Highlight code blocks
+        aiMessageDiv.querySelectorAll('pre code').forEach(block => {
+          Prism.highlightElement(block);
+        });
+
+      } catch (error) {
+        console.error('Error:', error);
+        removeTypingIndicator();
+        addMessage('Sorry, I encountered an error. Please check your API key and try again.', 'assistant');
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    function addMessage(content, sender) {
+      const chatMessages = document.getElementById('chatMessages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+      
+      const bubbleDiv = document.createElement('div');
+      bubbleDiv.className = `message-bubble ${sender === 'user' 
+        ? 'bg-indigo-600 text-white' 
+        : 'bg-gray-100 dark:bg-gray-700'} rounded-2xl px-4 py-2`;
+      
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      
+      if (sender === 'user') {
+        contentDiv.textContent = content;
+      } else {
+        contentDiv.innerHTML = marked.parse(content || '...');
+      }
+      
+      bubbleDiv.appendChild(contentDiv);
+      messageDiv.appendChild(bubbleDiv);
+      chatMessages.appendChild(messageDiv);
+      
+      // Scroll to bottom
+       chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      return messageDiv;
+    }
+
+    function updateMessage(messageDiv, content) {
+      const contentDiv = messageDiv.querySelector('.message-content');
+      contentDiv.innerHTML = marked.parse(content);
+      
+      // Scroll to bottom
+      const chatMessages = document.getElementById('chatMessages');
+      // chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+      const chatMessages = document.getElementById('chatMessages');
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'flex justify-start';
+      typingDiv.id = 'typingIndicator';
+      
+      const bubbleDiv = document.createElement('div');
+      bubbleDiv.className = 'message-bubble bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-2';
+      bubbleDiv.innerHTML = `
+        <div class="flex items-center space-x-1">
+          <span class="typing-indicator"></span>
+          <span class="typing-indicator"></span>
+          <span class="typing-indicator"></span>
+        </div>
+      `;
+      
+      typingDiv.appendChild(bubbleDiv);
+      chatMessages.appendChild(typingDiv);
+      
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const typingIndicator = document.getElementById('typingIndicator');
+      if (typingIndicator) {
+        typingIndicator.remove();
+      }
+    }
+
+    function clearChat() {
+      document.getElementById('chatMessages').innerHTML = `
+        <div class="text-center text-gray-500 dark:text-gray-400 py-8">
+          <div class="text-6xl mb-4">🧠</div>
+          <h2 class="text-xl font-semibold mb-2">Welcome to AI Interview Copilot</h2>
+          <p class="text-sm">Select a model from the sidebar and start asking questions!</p>
+        </div>
+      `;
+      showNotification('Chat cleared');
+    }
+
+    function newChat() {
+      clearChat();
+      showNotification('New chat started');
+    }
+
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+    }
+
+    // Load saved preferences
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+</body>
+</html>
